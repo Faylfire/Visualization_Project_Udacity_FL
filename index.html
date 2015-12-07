@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+    <style></style>
+
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.5/d3.min.js"></script>
+	<script src="http://dimplejs.org/dist/dimple.v2.1.6.min.js"></script>
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+	<script src="box_v5.js"></script>
+	<script src='scatter_v5.js'></script>
+	<script type="text/javascript">
+
+	function draw(baseball) {
+
+		//filter out pitchers
+		var filt_baseball = baseball.filter(function(d) { return +d['avg'] > 0; } );
+        var baseball = filt_baseball;
+
+		var h_idx = 0; 
+		var boxdata = {
+			'HR' : [],
+			'avg': [],
+			'size':[],
+			'weight':[],
+			'height':[]
+		}
+		var columns = ['avg','HR'];
+
+
+		//Create the necessary features and format data
+		baseball.forEach(function(d) {
+			//creates the necessary data for the scatter plot
+        	d['HW']= +d['weight']/Math.sqrt(+d['height']);
+
+            var h_extent = d3.extent(baseball, function(d) {
+                return +d['height'];
+            });
+
+            var w_extent = d3.extent(baseball, function(d) {
+                return +d['weight'];
+            });
+            var wMM = (+d['weight']-w_extent[0])/(w_extent[1]-w_extent[0]);
+            var hMM = (+d['height']-h_extent[0])/(h_extent[1]-h_extent[0]);
+
+            d['size'] = (wMM + hMM)/2;
+
+            //creates the necessary data for box plot
+
+            var batth = d['handedness'],
+        		battAvg = +d['avg'],
+        		battHR = +d['HR'],
+        		size = +d['size'],
+        		weight = +d['weight'],
+        		height = +d['height'];
+
+        	//for Pie Chart
+            d['count'] = 1;
+
+    		if (batth == 'L') {
+    			h_idx = 0;
+    		} else if (batth == "R") {
+    			h_idx = 1;
+    		} else { h_idx = 2; };
+
+    		for (i in columns) {
+    			//debugger;
+    			var x = boxdata[columns[i]][h_idx];
+    			if (i==0) {
+    				//console.log(+d[columns[i]]);
+    				dt = +d[columns[i]];
+    				dt =dt.toPrecision(3);
+    			} else {
+    				dt = +d[columns[i]];
+    			}
+    			if (!x) {
+    				x = boxdata[columns[i]][h_idx] = [dt];
+    			} else { x.push(dt); };
+    		}
+
+    	});
+
+		//Setthing up selection variables for color coding and clicks
+       	var selections = ["button-r----",'button-l----','button-b----'];
+        var fillColors = ['rgb(253, 180, 98)','rgb(128, 177, 211)','rgb(188, 128, 189)'];
+        var strokeColors = ['rgb(211, 150, 81)','rgb(107, 148, 176)','rgb(157, 107, 158)'];
+        var handbatt = ['r','l','b'];
+        var colorHanded = [{},{},{}];
+
+        for (i in handbatt) {
+        	colorHanded[i]['hand'] = handbatt[i];
+        	colorHanded[i]['dimple'] ='#dimple-'+handbatt[i]+'----';
+        	colorHanded[i]['box']='#boxplot-'+handbatt[i]+'----';
+        	colorHanded[i]['fill']=fillColors[i];
+        	colorHanded[i]['stroke']=strokeColors[i];
+        	colorHanded[i]['button']='button-'+handbatt[i]+'----';
+        	colorHanded[i]['dlegend']='.dimple-legend.dimple-'+handbatt[i];
+         }
+
+        var colors = {
+            'r':'rgb(253, 180, 98)',
+            'l':'rgb(128, 177, 211)',
+            'b':'rgb(188, 128, 189)',
+            'rdark':'rgb(215,153,83)',
+            'ldark':'rgb(109,150,179)',
+            'bdark':'rgb(160,109,161)'
+        };
+
+        //Start of Boxplots
+		"use strict";
+		var margin = {top: 10, right: 50, bottom: 70, left: 50},
+        //var margin = {top: 50, right: 70, bottom: 50, left: 70},
+	    width = 400 - margin.left - margin.right,
+	    height = 450 - margin.top - margin.bottom;
+
+	    function drawbox(balldata, extent){
+
+			d3.select('.chart2')
+            	.append('h3')
+            	.text('Batting Average Summary Statistics')
+            	.style('text-align', "center");
+
+            //Sets up a box plot parameters with outliers set to 1.5 times the inner quartile range.
+		    var chart = d3.box()
+			.whiskers(iqr(1.5))
+			.height(height)	
+			.domain(extent)
+			//.showLabels(labels);
+
+
+			//Create the x and y scales
+	        var y_scale = d3.scale.linear()
+	            .range([height+margin.top,margin.top])
+	            .domain(extent);
+
+	  		var y_axis = d3.svg.axis()
+	            .scale(y_scale)
+	            .orient('left')
+	            .tickFormat(d3.format('.3f'));
+
+	        var x_scale = d3.scale.ordinal()
+	        	.domain(['Left', 'Right', 'Switch'])
+	        	.rangeRoundBands([0 , width], 0.7, 0.3);
+
+	        var x = d3.scale.ordinal()
+	        	.domain([0, 1, 2])
+	        	.rangeRoundBands([0 , width], 0.7, 0.3);
+
+	       	var x_axis = d3.svg.axis()
+	       		.scale(x_scale)
+	       		.orient('bottom');
+
+
+	       	//Append SVG element and draw
+			var chartarea = '.chart2';
+
+		    var svg = d3.select(chartarea).append("svg")
+			.attr("width", width + margin.left + margin.right)
+			.attr("height", height + margin.top + margin.bottom)
+			.attr("class", "box")    
+			.append("g")
+			.attr('class', 'boxarea')
+			.attr("transform", "translate(" + margin.left + "," + 0 + ")");
+
+			//debugger;
+
+			var idx = 0;
+			var colidx = 0;
+			var ord = ['Left', 'Right', 'Switch'];
+
+			//Sets the svg element with data to send to box.js. Append an 'g' element for box.js to draw boxplots
+			svg.selectAll(".box")	   
+	      	   .data(balldata)
+			   .enter().append("g")
+		       .attr('id', function(d){
+		       	var col = 'b'
+		       	if (colidx == 0){
+		       		col = 'l';
+		       	} else if (colidx == 1) {
+		       		col = 'r';
+		       	} else {col ='b';}
+		       	colidx+=1;
+		       	return 'boxplot-'+col+'----';
+		       })
+			   .attr("transform", function(d) { 
+			   	var shift = x_scale(ord[idx]);
+			   	idx += 1;
+			   	return "translate(" + shift  + "," + margin.top + ")"; } )
+	           .call(chart.width(x_scale.rangeBand()));
+
+	           //boxsvg.exit().remove();
+
+
+	       	d3.select(chartarea)
+	       		.select('svg')
+	            .append('g')
+	            .attr("class", "y axis")
+	            .attr("transform", "translate(" +50+ ",0)")
+	            .style('stroke', "black")
+	            .style('fill', 'none')
+	            .call(y_axis);
+
+	        d3.select(chartarea)
+	        	.select('svg')
+	            .append('g')
+	            .attr('class', "x axis")
+	            .attr("transform", "translate(" +margin.left +","+ (height+margin.top)+")")
+	            .style('stroke', "black")
+	            .style('fill', 'none')
+	            .call(x_axis);
+
+	        var svgC = d3.select(chartarea).select("svg")
+	        svgC.append("text")
+	        	.attr('id', 'box_y_label')
+	            .attr("text-anchor", "middle")  // this makes it easy to centre the text as the transform is applied to the anchor
+	            .attr("transform", "translate("+ (margin.top) +","+(height/2)+")rotate(-90)")  // text is drawn off the screen top left, move down and out and rotate
+	            .text("Batting Average")
+	            .style('font','14px sans-serif')
+	            .style('font-weight','bold');
+
+	        svgC.append('text')
+		        .attr('id', 'box_x_label')
+	            .attr("text-anchor", "middle")
+	            .attr("transform", "translate("+ (width+margin.left*2)/2 +","+(height+(margin.top*5))+")")
+	            .text("Batting Hand")
+	            .style('font', '14px sans-serif')
+	            .style('font-weight','bold');
+
+	        colorCode();
+
+	      //Add a legend for mean and median
+	    	var legend = svgC.append('g')
+				.attr("class", "legend")
+				.attr('transform', "translate(" + (width-20) + "," + 5+")")
+				.selectAll("g")
+				.data(["Mean","Median"])
+				.enter().append("g");
+
+          	legend.append("line")
+				.attr("y1", function(d,i) {
+				return i*20;
+				})
+				.attr("y2", function(d,i) {
+					return i*20;
+				})
+				.attr('x1', 5)
+				.attr('x2', 26)
+				.attr('strok-width', 3)
+				.attr('stroke','black')
+				.style("stroke-dasharray", function(d,i){
+					if (d == 'Mean'){
+						return ('3,3');
+					}
+				})
+
+          	legend.append("text")
+				.attr("y", function(d, i) {
+				return i*20 + 5;
+				})
+				.attr ("x", 40)
+				.text(function(d) {
+				return d;
+				})
+				.attr('text-align','right');
+
+
+	        //Computes the inner quartile range
+	        function iqr(k) {
+			    return function(d, i) {
+			    var q1 = d.quartiles[0],
+			        q3 = d.quartiles[2],
+			        iqr = (q3 - q1) * k,
+			        i = -1,
+			        j = d.length;
+			    while (d[++i] < q1 - iqr);
+			    while (d[--j] > q3 + iqr);
+			    return [i, j];
+			    };
+			}
+
+	    }
+
+	    //Change the boxplots according to the variable selected
+	    function updatebox(balldata, extent, feature){
+
+		    var chart = d3.box()
+			.whiskers(iqr(1.5))
+			.height(height)	
+			.domain(extent)
+
+			//Create the x and y scales
+	        var y_scale = d3.scale.linear()
+	            .range([height+margin.top,margin.top])
+	            .domain(extent);
+
+	  		var y_axis = d3.svg.axis()
+	            .scale(y_scale)
+	            .orient('left');
+	        
+	        if (feature == 'avg'){
+	        	y_axis.tickFormat(d3.format('.3f'));
+	        }
+
+	        var x_scale = d3.scale.ordinal()
+	        	.domain(['Left', 'Right', 'Switch'])
+	        	.rangeRoundBands([0 , width], 0.7, 0.3);
+
+	        var x = d3.scale.ordinal()
+	        	.domain([0, 1, 2])
+	        	.rangeRoundBands([0 , width], 0.7, 0.3);
+
+	       	var x_axis = d3.svg.axis()
+	       		.scale(x_scale)
+	       		.orient('bottom');
+
+
+			var chartarea = '.chart2';
+
+			var idx = 0;
+			var colidx = 0;
+			var ord = ['Left', 'Right', 'Switch'];
+
+			var boxsvg = d3.select(chartarea).selectAll(".box").select('.boxarea'); 
+	      	   
+	      	//Clears svg area for redraw
+			boxsvg.selectAll('g').remove();
+
+
+			//draws the boxplots with the new data
+		    boxsvg.selectAll(".box")	   
+		      	   .data(balldata)
+				   .enter().append("g")
+			       .attr('id', function(d){
+			       	var col = 'b'
+			       	if (colidx == 0){
+			       		col = 'l';
+			       	} else if (colidx == 1) {
+			       		col = 'r';
+			       	} else {col ='b';}
+			       	colidx+=1;
+			       	return 'boxplot-'+col+'----';
+			       })
+				   .attr("transform", function(d) { 
+				   	var shift = x_scale(ord[idx]);
+				   	idx += 1;
+				   	return "translate(" + shift  + "," + margin.top + ")"; } )
+		           .call(chart.width(x_scale.rangeBand()));
+
+
+	       	d3.select(chartarea)
+	       		.select('g.y.axis')
+	       		.remove();
+
+	       	d3.select(chartarea)
+	       		.select('svg')
+	            .append('g')
+	            .attr("class", "y axis")
+	            .attr("transform", "translate(" +50+ ",0)")
+	            .transition()
+	            .duration(500)
+	            .style('stroke', "black")
+	            .style('fill', 'none')
+	            .call(y_axis);
+
+
+	        d3.select(chartarea)
+	            .select("#box_y_label")
+	            .text(chartName(feature));
+
+	        colorCode(); //colors the boxplots for handedness
+
+	        //Adds the proper title for the chart
+	        function chartName(feature){
+	            	if (feature == 'avg') {
+	            		return 'Batting Average';
+	            	} else if (feature == 'HR') {
+	            		return 'Home Runs';
+	            	} else {
+	            		f = 'Player ' + feature.slice(0,1).toUpperCase()+feature.slice(1);
+	            		return f;
+	            	}
+	        }
+
+	        d3.select('.chart2')
+	        	.select('h3')
+	        	.text(chartName(feature)+' Summary Statistics')
+	        	.style('text-align', "center");
+
+		        function iqr(k) {
+				  return function(d, i) {
+				    var q1 = d.quartiles[0],
+				        q3 = d.quartiles[2],
+				        iqr = (q3 - q1) * k,
+				        i = -1,
+				        j = d.length;
+				    while (d[++i] < q1 - iqr);
+				    while (d[--j] > q3 + iqr);
+				    return [i, j];
+				  };
+				}
+
+	    }
+
+
+	    //Draws the initial Boxplot
+	    var balldata = boxdata['avg'];
+	    var avg_extent = d3.extent(baseball, function(d) {
+	    			  dt = +d['avg']
+                      return dt.toPrecision(3);
+        });
+        //debugger;
+        drawbox(balldata,avg_extent);
+
+        //Update function that will call the redraw of the boxplots
+        function update(feature) {
+        	balldata = boxdata[feature];
+
+        	var ballextent = d3.extent(baseball, function(d) {
+        			  if (feature == 'avg') {
+        			  	dt = +d[feature];
+        			  	return dt.toPrecision(3);
+        			  } else {
+                      return +d[feature];
+                  }
+        	});
+
+        	updatebox(balldata,ballextent,feature);
+        }
+
+
+        var box_idx = 0;
+
+        //Set buttons for variable selection
+        var box_interval = setInterval(function() {
+            //update(columns[box_idx]);
+
+            box_idx++;
+
+            if(box_idx >= columns.length) {
+            	update('avg');
+                clearInterval(box_interval);
+                //hand_idx = 0;
+
+                var buttons = d3.select('.chart4')
+                      .append("div")
+                      .attr("class", "box_buttons")
+                      .selectAll("div")
+                      .data(columns)
+                      .enter()
+                      .append('div')
+                      .attr('class','bbuttons')
+                      .text(function(d){ 
+                      	if (d == 'avg'| d=='HR'|d=='size') {
+                      		return d+' '+'\u00A0\u00A0\u00A0'+'➜';
+                      		//➤ Padding with real spaces above
+                      	} else {
+                      		return d+' ➜';
+                        }
+                      })
+                      .style('background', function(d){
+                      	if (d=='avg'){
+                      		return 'lightBlue';
+                      	} else {
+                      		return "rgb(251, 128, 114)";
+                      	}
+                      })
+                      .style('color', function(d){
+                      	if (d=='avg'){
+                      		return 'white';
+                      	} else {
+                      		return "black";
+                      	}
+                      });
+
+                buttons.on("click", function(d) {
+                    d3.selectAll('div.box_buttons div')
+                      //.selectAll('div')
+                      .style("background", "rgb(251, 128, 114)")
+                      .style('color', "black");
+
+                    d3.select(this)
+                      .transition()
+                      .duration(300)
+                      .style('background', "lightBlue")
+                      .style('color', 'white');
+                    var splitd = d.split();
+                    update(splitd[0]);
+                });
+
+            }
+          }, 300);
+
+
+
+		//Draw Pie Chart with Dimple
+
+		d3.select('.chart3')
+		  .append('h3')
+		  .text('Proportion of Players with Batting Average > 0.066')
+		  .style('text-align', 'center');
+
+
+		var svgPie = dimple.newSvg(".chart3", 350,300);
+
+
+        var myChart = new dimple.chart(svgPie, baseball);
+        myChart.addMeasureAxis('p','count');
+        myChart.addSeries('handedness', dimple.plot.pie);
+        myChart.addMeasureAxis('p','Total')
+        myChart.addLegend(250,20,100,270, 'left');
+        myChart.draw();
+
+        function updatePie(filterby) {
+
+        	var filterBaseball = baseball.filter(function(d) { return +d['avg'] >= filterby; } );
+
+        	myChart.data = filterBaseball;
+
+        	d3.select('.chart3')
+			  .select('h3')
+			  .text('Proportion of Players with Batting Average > '+filterby.toPrecision(3))
+			  .style('text-align', 'center');
+
+        	myChart.draw(300);
+
+        	colorCode();
+        }
+
+		//Add buttons to filter the pie chart proportions then link to the rect function.
+		var top = [0.066,0.20,0.25, 0.28, 0.29,0.30];
+
+		var pie_buttons = d3.select('.chart4')
+                      .append("div")
+                      .attr("class", "pie_buttons")
+                      .selectAll("div")
+                      .data(top)
+                      .enter()
+                      .append('div')
+                      .attr('class','pbuttons')
+                      .attr('id',function(d){
+                      	return 'pieButton-'+d+'----';
+                      })
+                      .text(function(d){ return d})
+                      .style('visibility','hidden');
+
+            pie_buttons.on("click", function(d) {
+                    d3.selectAll('div.pie_buttons div')
+                      .style("background", "rgb(251, 128, 114)")
+                      .style('color', "black");
+
+                    d3.select(this)
+                      .transition()
+                      .duration(300)
+                      .style('background', "lightBlue")
+                      .style('color', 'white');
+
+                    updatePie(d);
+                });
+
+
+		//Draw Scatter Plot
+		var charta = '.chart1';
+		drawScatter(baseball,charta,false);
+
+		//Animation of proportion of Left-handers in the top batting average
+		
+		var pie_idx = 0;
+
+    	var pie_interval = setInterval(function() {
+
+
+			if(pie_idx >= top.length) {
+			  clearInterval(pie_interval);
+			  console.log('Imhere')
+			  document.getElementById('button-show all----').click();
+
+			} else {
+				pieId = 'pieButton-'+top[pie_idx]+'----';
+				rectId = 'filt-rect-'+top[pie_idx]+'----';
+
+				document.getElementById(pieId).click();
+
+
+				d3.selectAll('.top-Batters')
+				  .style('opacity','0');
+
+				document.getElementById(rectId).style.opacity = .2;
+
+				pie_idx++;
+
+			}
+		}, 2700);
+
+
+        //MouseOver and out functions to indicate interactivity, and color code the boxplots and pie charts
+
+		function mouseOver(d){ 
+
+			var dsplit = this.id.split('-');
+			var h = dsplit[1];
+		    var boxId = '#boxplot-'+h+'----';
+		    var dimpleId = '#dimple-'+h+'----';
+
+		    d3.select(boxId).select('rect').style('fill',colors[h+'dark']);
+			d3.select(dimpleId).style('fill',colors[h+'dark']);
+			//console.log(dimpleId.slice(1));
+			//document.getElementById(dimpleId.slice(1)).mouseover();
+
+			$(dimpleId).mouseover();
+		}
+
+		function mouseOut(d){
+
+			var dsplit = this.id.split('-');
+			var h = dsplit[1];
+		    var boxId = '#boxplot-'+h+'----';
+		    var dimpleId = '#dimple-'+h+'----';
+
+		    d3.select(boxId).select('rect').style('fill',colors[h]);
+			d3.select(dimpleId).style('fill',colors[h]);
+
+		}
+
+        //sets the colors for the boxplot and piecharts
+        function colorCode(){
+
+	        for (i in colorHanded) {
+	        	var x = colorHanded[i]['button'];
+	        	d3.select(colorHanded[i].dimple)
+	              .style('fill', colorHanded[i].fill)
+	          	  .style('stroke', colorHanded[i].stroke)
+	          	  .style('cursor','pointer');
+
+	          	d3.select(colorHanded[i]['dlegend'])
+	          	  .select('rect')
+	          	  .style('fill', colorHanded[i].fill)
+	          	  .style('stroke', colorHanded[i].stroke)
+
+	          	d3.select(colorHanded[i].box)
+	          	  .select('.box')
+	              .style('fill', colorHanded[i].fill)
+	              .style('cursor','pointer');
+	        }
+
+	        //sets on mouseOver and mouseout and click events This could be put into a loop or use d3 to generate from a list
+
+			d3.select(colorHanded[0]['dimple'])
+				.on("click", function(){ document.getElementById(selections[0]).click(); });
+
+			d3.select(colorHanded[1]['dimple'])
+				.on("click", function(){ document.getElementById(selections[1]).click(); });
+
+			d3.select(colorHanded[2]['dimple'])
+				.on("click", function(){ document.getElementById(selections[2]).click(); });
+
+			d3.select(colorHanded[0]['box'])
+				.on("mouseover", mouseOver)
+				.on("mouseout", mouseOut)
+				.on("click", function(){ document.getElementById(selections[0]).click(); });
+
+			d3.select(colorHanded[1]['box'])
+				.on("mouseover", mouseOver)
+				.on("mouseout", mouseOut)
+				.on("click", function(){ document.getElementById(selections[1]).click(); });
+
+			d3.select(colorHanded[2]['box'])
+				.on("mouseover", mouseOver)
+				.on("mouseout", mouseOut)
+				.on("click", function(){ document.getElementById(selections[2]).click(); });
+
+    	}
+
+    	colorCode();
+	}
+
+	</script>
+
+	<script type="text/javascript">
+
+
+
+        </script>
+
+
+	<link rel="stylesheet" href="style_v5.css">
+
+  </head>
+  <body>
+
+    <script type="text/javascript"> 
+
+    //initial call to the rest of the draw script
+	d3.csv("baseball_data.csv", draw);
+
+	//Sets up the div structure for the page and adding text and headings
+	var introText = [];
+
+		introText[0] = { 'text': 'This dataset contains 1157 baseball players with their names, height, weight, batting hand, batting average (ratio of safe hits to at-bats), and total career home runs. 266 pitchers have been removed from the batting performance analysis because both batting average and total home runs are zero.'}
+		introText[1] = {'text': 'This visualization compares the performance of the remaining 891 players by batting hand. Summary statistics show a statistical advantage to being a left-handed batter. The top batting average bracket (> .300) shows 67% left-handers despite having half the number of players as right-handers in the dataset. '}
+		introText[2] ={'text': 'Left-Handed prevalance is approximately 10% of the general population. The dataset shows 29% left-handed batters which may indicate that batting left-handed is advantageous.'}
+
+
+	d3.select('body')
+	  .append('div')
+	  .attr('class', 'row header')
+	  .append('h2')
+	  .text('Does Batting Hand Matter?')
+	  .style('text-align', 'center')
+	
+	d3.select('body')
+	  .select('.row.header')
+	  .append('h3')
+	  .text('Batting Performance Comparision of Baseball Players')
+	  .style('text-align', "center")
+
+	d3.select('div.row.header')
+	  .selectAll('p')
+	  .data(introText)
+	  .enter()
+	  .append('p')
+	  .text(function(d){ return d.text})
+
+	//Sets up the Divs for the chart areas
+
+	var divs = d3.select('body')
+	  .append('div')
+	  .attr('class', "row")
+	  .style('height','750px')
+	  .style('padding','5px')
+
+	  divs.append('div')
+	  .attr('class','row col-md-9 chart1')
+	  .style('float', 'left')
+	  .style('height', '800px')
+	  //.text('hello')
+
+	  divs.append('div')
+	  .attr('class','row col-md-3 chart2')
+	  .style('float','right')
+	  .style('height', '450px')
+
+	  divs.append('div')
+	  .attr('class','row col-md-3 chart3')
+	  .style('float', 'right')
+	  .style('height', '300px')
+
+	  divs.append('div')
+	  .attr('class','row col-md-9 chart4')
+	  .style('float', 'left')
+	  .style('height', '200px')
+
+	d3.select('body')
+	  .append('div')
+	  .attr('class', 'footer')
+	  .style('height', '300px')
+
+	d3.select('.chart3').append('p').style('font-size','12px').text('\u00A0').style('visibility','hidden')
+	d3.select('.chart3').append('p')
+	  .style('font-size','12px')
+	  .append('ul').append('li').text('Click on a button to view a different variable')
+	d3.select('.chart3').select('ul').append('li').text('Click on a section of the scatter plot to see the proportion of batters filtered by batting average')
+	d3.select('.chart3').select('ul').append('li').text('Click on any pie slice or boxplot to filter scatter plot by batting hand')
+
+	</script>
+
+
+  </body>
+</html>

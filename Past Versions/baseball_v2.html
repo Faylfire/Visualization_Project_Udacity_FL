@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <script src="http://d3js.org/d3.v3.min.js"></script>
+      <style>
+      div.hand_buttons {
+      position: fixed;
+      top: 100px;
+      left: 150px;
+      } 
+
+      div.hand_buttons div {
+      background-color: rgb(251, 201, 127);
+      padding: 3px;
+      margin: 7px;
+      cursor: pointer;
+      }
+
+
+
+      .tooltip {
+        -webkit-border-radius: 5px;
+        -moz-border-radius: 5px;
+        border-radius: 5px;
+      }
+
+      x.axis {
+        font-family: sans-serif;
+      }
+
+      </style>
+      <script type="text/javascript"> 
+      /*
+      Baseball[1] = {
+        HR: " 4",
+        avg: " 0.130",
+        handedness: "R",
+        height: " 73",
+        name: "Denny Lemaster",
+        weight: " 182"
+      }
+      */
+
+      function draw(baseball) {
+
+        d3.select('body')
+          .append('h2')
+          .text('Baseball: Height/Weight and Batting Average')
+          .style('text-align', "center");
+
+      //Creates a set with all the names in the dataset
+          var names = d3.set();
+
+              baseball.forEach(function(d) {
+                  names.add(d['name']);
+              });
+
+      //Creates a set with all the handedness in the dataset
+
+          var hand = d3.set();
+
+              baseball.forEach(function(d) {
+                  hand.add(d['handedness'])
+              });
+      //Sets up the SVG area
+        "use strict";
+          var margin = 75,
+              width = 1400 - margin,
+              height = 600 - margin,
+              radius = 4,
+              color = '#0099FF';
+
+          //debugger;
+
+          //Creats g/div like area used in SVG
+          var svg = d3.select("body")
+                      .append("svg")
+                      .attr("width", width + margin)
+                      .attr("height", height + margin)
+                      .append('g')
+                      .attr('class','chart');
+
+          //Finds the range of the data values in the dataset for Height and Weight
+          var height_extent = d3.extent(baseball, function(d) {
+              //debugger;
+              return d['height'];
+          });
+
+          var weight_extent = d3.extent(baseball, function(d) {
+              return d['weight'];
+          });
+
+          //Creates the scales used to make the Axis
+          var height_scale = d3.scale.linear()
+            .range([height,margin])
+            .domain(height_extent);
+
+          var weight_scale = d3.scale.linear()
+            .range([margin,width])
+            .domain(weight_extent);
+
+
+          //Creates the axis height and weight
+          var height_axis = d3.svg.axis()
+            .scale(height_scale)
+            .orient("left");
+
+          var weight_axis = d3.svg.axis()
+            .scale(weight_scale);
+
+          //Create a scale for the radius
+          var bat_extent = d3.extent(baseball, function(d) {
+              //debugger;
+              return d['avg'];
+          });
+
+          var bat_scale = d3.scale.linear()
+            .range([0,10])
+            .domain(bat_extent);
+
+
+          //Appends the axis to the svg.g element
+          d3.select("svg")
+            .append('g')
+            .attr('class', "x axis")
+            .attr("transform", "translate(0,"+ height + ")")
+            .style('stroke', "black")
+            .style('fill', 'none')
+            .style('font-family', 'sans-serif')
+            .call(weight_axis);
+
+          d3.select("svg")
+            .append('g')
+            .attr("class", "y axis")
+            .attr("transform", "translate(" + margin + ",0)")
+            .style('stroke', "black")
+            .style('fill', 'none')
+            .call(height_axis);
+
+          //Appends Text Labels to the axis
+
+          d3.select("svg")
+            .append("text")
+            .attr("text-anchor", "middle")  // this makes it easy to centre the text as the transform is applied to the anchor
+            .attr("transform", "translate("+ (margin/2) +","+(height/2)+")rotate(-90)")  // text is drawn off the screen top left, move down and out and rotate
+            .text("Height (in)");
+
+          d3.select('svg')
+            .append('text')
+            .attr("text-anchor", "middle")
+            .attr("transform", "translate("+ (width/2) +","+(height+(margin/2))+")")
+            .text("Weight (lb)");
+
+          //Add a hoverover tooltip for each point
+          var tooltip = d3.select("body")
+                          .append("div")
+                          .append('pre')
+                          .attr('class', "tooltip")
+                          .style("position", "absolute")
+                          .style("z-index", "10")
+                          .style("visibility", "hidden")
+                          .style('background', "lightBlue")
+                          .text("a simple tooltip");
+
+          function handed(d){
+              if (d['handedness']=='R') {
+                return 'lightBlue';
+              } else {
+              //return 'rgb(247, 148, 32)'
+              return "orange";
+              }
+          }
+
+          //randome number gen for jitter
+          function getRandomInt(min, max) {
+              return Math.floor(Math.random() * (max - min)) + min;
+          }
+
+          //Selects circle elements in SVG and binds a circle to each data point
+          d3.select("svg")
+            .selectAll("circle")
+            .data(baseball)
+            .enter()
+            .append("circle")
+            .attr('cx', function(d) { 
+                var result = weight_scale(d['weight']) + getRandomInt(-12,12);
+                if (result <= margin+11) {
+                  return margin+11;
+                } else {
+                  return result;
+                }
+            })
+            .attr('cy', function(d) { 
+                var result = height_scale(d['height']) + getRandomInt(-12,12); 
+                if (result >= height) {
+                  return height-11;
+                } else {
+                  return result;
+                }
+            })
+            .attr('r', function(d) { return bat_scale(d['avg']); })
+            .attr('fill', 'orange')
+            .attr('stroke', 'black')
+            .attr('stroke-width', 0.7)
+            .attr('opacity', 0.5)
+            .on("mouseover", function(d){ return tooltip.style("visibility", "visible").text(d['name']+'\n'+'HR: '+d['HR']+'\n'+'Avg: '+d['avg']);
+            })
+            .on("mousemove", function(){return tooltip.style("top", (event.pageY-10)+"px").style("left",(event.pageX+10)+"px");})
+            .on("mouseout", function(){return tooltip.style("visibility", "hidden");});
+
+          function update(h) {
+
+            function update_circle(d) {
+                  
+                  debugger;
+                  if(d.handedness == h) {
+                      if (+d.HR >= 300) {
+                        return 'red';
+                      } else {
+                      return "lightBlue";
+                    }
+                  } else {
+                      return 'white';
+                  }
+            }
+
+
+
+              d3.select('h2')
+                .text(function(){
+                  if (h=='L') {
+                    return 'Baseball: Height/Weight and Batting Average for Left-Hand Batters'
+                  } else if (h=='R') {
+                    return 'Baseball: Height/Weight and Batting Average for Right-Hand Batters'
+                  } else {
+                    return 'Baseball: Height/Weight and Batting Average for Switch Hitters'
+                  }
+                });
+
+              d3.selectAll('circle')
+                        .transition()
+                        .duration(500)
+                        .style('fill', update_circle)
+                        .style('stroke', update_circle);
+          };
+
+          function newfunc(color){
+            console.log(hand);
+            d3.selectAll('circle')
+               .style('fill',color)
+          }
+
+          //Set an Interval that will continue running that changes the color of the handedness
+          var hand_idx = 0;
+          var colors = ['black', 'red', 'blue'];
+
+          var hand_interval = setInterval(function() {
+            update(hand.values()[hand_idx]);
+            //newfunc(colors[hand_idx]);
+
+            hand_idx++;
+
+            if(hand_idx >= hand.values().length) {
+                clearInterval(hand_interval);
+                //hand_idx = 0;
+
+                var buttons = d3.select('body')
+                      .append("div")
+                      .attr("class", "hand_buttons")
+                      .selectAll("div")
+                      .data(hand.values())
+                      .enter()
+                      .append('div')
+                      .text(function(d){ return d;
+                      });
+
+                buttons.on("click", function(d) {
+                    d3.selectAll('div.hand_buttons div')
+                      //.selectAll('div')
+                      .style("background", "rgb(251, 201, 127)")
+                      .style('color', "black");
+
+                    d3.select(this)
+                      .transition()
+                      .duration(500)
+                      .style('background', "lightBlue")
+                      .style('color', 'white');
+
+                    update(d);
+                });
+
+            }
+          }, 4000);
+
+          //console.log(names.values().splice(0,10));
+        debugger;
+      }
+      
+      </script>
+  </head>
+<body>
+  <script type="text/javascript">
+  /*
+    Use D3 to load the GeoJSON file
+  */
+    
+d3.csv("baseball_data.csv", draw);
+  </script>
+</body>
+</html>

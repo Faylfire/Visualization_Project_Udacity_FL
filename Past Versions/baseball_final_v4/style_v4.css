@@ -1,0 +1,179 @@
+	/* General Usage */
+	body {
+	  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+	  margin: 1em auto 4em auto;
+	  position: relative;
+	  tab-size: 2;
+	  width: 1400px;
+	}
+
+	.header {
+		padding-top: 10px;
+		padding-bottom: 20px;
+	}
+
+	.row {
+
+		margin-right: -15px;
+		margin-left: -15px;
+	}
+
+	.footer {
+		width:100%;
+		height:400px;
+	}
+
+	.col-md-6 {
+		width: 46%;
+	}
+
+	.col-md-3 {
+		width:25%;
+	}
+
+	.col-md-9 {
+		width:70%;
+	}
+
+	.chart1 {
+		/*border:1px solid black;*/
+		padding:10px;
+	}
+
+	.chart2 {
+		/*border:1px solid red;*/
+		padding:10px;
+	}
+
+	.chart3 {
+		padding:10px;
+	}
+
+	/* ------for Scatter Plot usage -------*/
+
+	.scatter {
+		font: 10px sans-serif;
+	}
+
+
+	/* ------for Boxplot usage ------ Start*/
+	.box {
+	  font: 10px sans-serif;
+	}
+
+	.box line,
+	.box rect,
+	.box circle {
+	  fill: #fff;
+	  stroke: #000;
+	  stroke-width: 1.5px;
+	}
+
+	.box .center {
+	  stroke-dasharray: 3,3;
+	}
+
+	.box .outlier {
+	  fill: none;
+	  stroke: #ccc;
+	}
+
+	div.box_buttons {
+      position: absolute;
+      left: 970px;
+      top: 320px;
+      width: 80px;
+      height: 165px;
+      text-align: center;
+      border-style:solid;
+      border-color:gray;
+      box-shadow: 1px 1px 5px #888888;
+      /*background-color: rgb(251, 128, 114);*/
+      -webkit-border-radius: 5px;
+      -moz-border-radius: 5px;
+      border-radius: 5px;
+
+
+      } 
+
+    div.box_buttons div {
+      /*background-color: rgb(251, 201, 127);*/
+      /*background-color:  rgb(251, 128, 114);*/
+      padding: 3px;
+      margin: 7px;
+      cursor: pointer;
+      }
+
+    div.bbuttons {
+      /*background-color:  rgb(251, 128, 114);*/
+      /*background-image: url('http://lorempixel.com/output/sports-h-c-77-175-5.jpg');*/
+      
+      padding: 3px;
+      margin: 7px;
+      cursor: pointer;
+      width: 60px;
+      height: 18px;
+      text-align: center;
+      font: 14px sans-serif;
+      background-color: rgb(251, 128, 114);
+      box-shadow: 1px 1px 5px #888888;
+      -webkit-border-radius: 5px;
+      -moz-border-radius: 5px;
+      border-radius: 15px;
+    }
+
+	/* ------for Boxplot usage ------ End*/		
+
+	/* ------for Scatter Plot ------ Start */
+	div.hand_buttons {
+      position: absolute;
+      left: 70px;
+      top: 720px;
+      width: 110px;
+      height: 135px;
+      -webkit-border-radius: 5px;
+      -moz-border-radius: 5px;
+      border-radius: 10px;
+      box-shadow: 1px 1px 5px #888888;
+      border:solid;
+      border-color:gray;
+
+      } 
+
+    div.hand_buttons div {
+      background-color: rgb(251, 128, 114);
+      padding: 3px;
+      margin: 7px;
+      cursor: pointer;
+
+      }
+
+    div.hbuttons {
+      /*background-color:  rgb(251, 128, 114);*/
+      /*background-image: url('http://lorempixel.com/output/sports-h-c-77-175-5.jpg');*/
+      
+      padding: 3px;
+      margin: 7px;
+      cursor: pointer;
+      width: 90px;
+      height: 18px;
+      text-align: center;
+      font: 14px sans-serif;
+      background-color: rgb(251, 128, 114);
+      box-shadow: 1px 1px 5px #888888;
+      -webkit-border-radius: 5px;
+      -moz-border-radius: 5px;
+      border-radius: 15px;
+    }
+
+
+
+    .tooltip {
+    	padding:2px;
+        -webkit-border-radius: 5px;
+        -moz-border-radius: 5px;
+        border-radius: 5px;
+      }
+
+
+
